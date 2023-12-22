@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Christbaum-Sammelaktion</title>
+    <link rel="icon" type="image/x-icon" href="https://onedrive.live.com/embed?resid=11b2818678a57ff9%21621018&authkey=%21ANj_kzvjAh9rl2g&width=512&height=512">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Leaflet.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <!-- Leaflet.markercluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        #csvFileInput {
+            position: absolute;
+            left: 10px;
+            bottom: 10px;
+            z-index: 1000;
+        }
+        .leaflet-control-layers {
+            font-size: 1.2em;
+        }
+        input[type=file] { 
+            color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div id="map">
+        <input type="file" id="csvFileInput" accept=".csv">
+    </div>
+
+    <!-- Leaflet.js -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Leaflet.markercluster -->
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster-src.js"></script>
+    <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
+    <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css' rel='stylesheet' />
+
+    <script>
+        // Configuration
+        const serverAddress = "https://www.blaulicht.wiki";
+        const geoPort = "5000";
+        const statePort = "5001";
+        const apiKey = "your_api_key";
+        const predefinedColors = ['#FF0000', '#0000FF', '#008000', '#FFA500', '#800080', '#FFFF00', '#FFC0CB', '#A52A2A', '#808080', '#00FFFF'];
+        const teamColors = {};
+        const teamClusterGroups = {};
+        let current_position, current_accuracy;
+
+        // Initialize the map
+        const map = L.map('map').setView([48.5665, 13.4312], 13);
+        map.addControl(new L.Control.Fullscreen());
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Create custom panes
+        map.createPane('donePane');
+        map.getPane('donePane').style.zIndex = 200;
+        map.createPane('missingPane');
+        map.getPane('missingPane').style.zIndex = 300;
+
+        // Initialize cluster groups
+		const missingClusterGroup = initClusterGroup('#000000', true);
+		const doneClusterGroup = initClusterGroup('#808080', false);
+
+        // Event listeners
+        document.getElementById('csvFileInput').addEventListener('change', handleFileSelect, false);
+        map.on('locationfound', onLocationFound);
+        map.on('locationerror', onLocationError);
+        watchUserPosition();
+        setInterval(fetchAndUpdateStates, 5000);
+
+        // Functions
+        function initClusterGroup(borderColor, addToMap = false) {
+			const clusterGroup = L.markerClusterGroup({
+				maxClusterRadius: 15,
+				iconCreateFunction: function(cluster) {
+					return L.divIcon({
+						html: '<div style="background-color: ' + borderColor + '25; border: 3px solid ' + borderColor + 'AA; width: 19px; height: 19px; border-radius: 50%; line-height: 19px; text-align: center; color: black;">' + cluster.getChildCount() + '</div>',
+						className: 'marker-cluster',
+						iconSize: L.point(19, 19),
+						iconAnchor: L.point(15.5, 15.5)
+					});
+				}
+			});
+			if (addToMap) {
+				clusterGroup.addTo(map);
+			}
+			return clusterGroup;
+		}
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                processData(e.target.result);
+                addClusterGroupsToControl();
+				fetchAndUpdateStates();
+            };
+            reader.readAsText(file);
+        }
+
+        function processData(csvData) {
+            const lines = csvData.split('\n');
+            lines.forEach((line, index) => {
+                if (index > 0 && line) {
+                    const [name, surname, address, count, teamName] = line.split(';');
+                    if (!teamClusterGroups[teamName]) {
+                        teamClusterGroups[teamName] = initClusterGroup(getTeamColor(teamName));
+                        teamClusterGroups[teamName].addTo(map);
+                    }
+                    for (let i = 0; i < count; i++) {
+                        geocodeAddress(address, teamName, count > 1 ? `${name} #${i + 1}` : name, surname);
+                    }
+                }
+            });
+        }
+
+        function addClusterGroupsToControl() {
+			const overlayMaps = {};
+			for (const teamName in teamClusterGroups) {
+				overlayMaps[teamName] = teamClusterGroups[teamName];
+			}
+			overlayMaps["Fehlend"] = missingClusterGroup;
+			overlayMaps["Erledigt"] = doneClusterGroup;			
+			L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);			
+			updateLayerControlColors();
+		}
+
+        function updateLayerControlColors() {
+            const labels = document.querySelectorAll('.leaflet-control-layers label');
+            labels.forEach(label => {
+                const labelText = label.textContent.trim();
+				const span = label.querySelector('span');
+
+				if (span && teamColors[labelText]) {
+					span.style.color = teamColors[labelText];
+				} else if (labelText === "Fehlend") {
+					label.style.fontWeight = 'bold';
+				} else if (labelText === "Erledigt") {
+					label.style.fontStyle = 'italic';
+				}
+            });
+        }
+
+        async function geocodeAddress(address, teamName, name, surname) {
+            const response = await fetch(`${serverAddress}:${geoPort}/geocode?address=${encodeURIComponent(address)}`);
+            const data = await response.json();
+            if (data.length > 0) {
+                const { lat, lon } = data[0];
+                addMarkerToMap(lat, lon, teamName, address, name, surname);
+            }
+        }
+
+        function addMarkerToMap(lat, lon, teamName, address, name, surname) {
+            const marker = L.circleMarker([lat, lon], { color: teamColors[teamName] });
+            marker.markerId = generateHashCode(surname, name, address);
+            marker.currentLayer = 'team';
+            marker.teamName = teamName;
+            marker.name = name;
+            marker.surname = surname;
+            marker.address = address;
+            updatePopupButton(marker);
+            teamClusterGroups[teamName].addLayer(marker);
+        }
+
+        function updatePopupButton(marker) {
+            let buttonsHTML = '';
+            switch (marker.currentLayer) {
+                case 'done':
+                    buttonsHTML = `<button onclick="clickToTeamLayer('${marker.markerId}')">Erneut hinzufügen</button>`;
+                    break;
+                case 'missing':
+                    buttonsHTML = `<button onclick="clickToDoneLayer('${marker.markerId}')">Erledigt</button>`;
+                    buttonsHTML += `<button onclick="clickToTeamLayer('${marker.markerId}')">Erneut hinzufügen</button>`;
+                    break;
+                default:
+                    buttonsHTML = `<button onclick="clickToDoneLayer('${marker.markerId}')">Erledigt</button>`;
+                    buttonsHTML += `<button onclick="clickToMissingLayer('${marker.markerId}')">Fehlend</button>`;
+            }
+            marker.bindPopup(`<b>${marker.surname} ${marker.name}</b><br>${marker.address}<br>${buttonsHTML}`);
+        }
+
+        async function fetchAndUpdateStates() {
+			const response = await fetch(`${serverAddress}:${statePort}/getStates?key=${apiKey}`);
+			const data = await response.json();
+			const removedIds = new Set(data.removed);
+			const missingIds = new Set(data.missing);
+
+			// Combine all cluster groups into a single array and iterate through them
+			const allClusterGroups = Object.values(teamClusterGroups).concat([doneClusterGroup, missingClusterGroup]);
+			allClusterGroups.forEach(clusterGroup => {
+				clusterGroup.eachLayer(marker => {
+					if (removedIds.has(marker.markerId) && marker.currentLayer !== 'done') {
+						moveToDoneLayer(marker.markerId);
+					} else if (missingIds.has(marker.markerId) && marker.currentLayer !== 'missing') {
+						moveToMissingLayer(marker.markerId);
+					} else if (!removedIds.has(marker.markerId) && !missingIds.has(marker.markerId) && marker.currentLayer !== 'team') {
+						moveToTeamLayer(marker.markerId);
+					}
+				});
+			});
+		}
+
+
+        function getTeamColor(teamName) {
+            if (!teamColors[teamName]) {
+                const colorIndex = Object.keys(teamColors).length % predefinedColors.length;
+                teamColors[teamName] = colorIndex < predefinedColors.length ? predefinedColors[colorIndex] : getRandomColor();
+            }
+            return teamColors[teamName];
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            return '#' + Array.from({ length: 6 }, () => letters[Math.floor(Math.random() * 16)]).join('');
+        }
+
+        function onLocationFound(e) {
+            if (current_position) {
+                map.removeLayer(current_position);
+                map.removeLayer(current_accuracy);
+            }
+            var radius = e.accuracy / 2;
+            current_position = L.circleMarker(e.latlng, {
+                radius: 5,
+                color: 'blue',
+                fillColor: 'blue',
+                fillOpacity: 1,
+                weight: 2
+            }).addTo(map);
+            current_accuracy = L.circle(e.latlng, {
+                radius: radius,
+                color: 'rgba(0, 0, 255, 0.1)',
+                fillColor: '#cacaca',
+                fillOpacity: 0.2,
+                weight: 1
+            }).addTo(map);
+        }
+
+        function onLocationError(e) {
+            console.error("Location error: ", e.message);
+        }
+
+        function watchUserPosition() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(function(position) {
+                    var latlng = new L.LatLng(position.coords.latitude, position.coords.longitude);
+                    map.fireEvent('locationfound', {
+                        latlng: latlng,
+                        accuracy: position.coords.accuracy
+                    });
+                }, onLocationError, {
+                    enableHighAccuracy: true,
+                    maximumAge: 30000,
+                    timeout: 27000
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function generateHashCode(surname, name, address, salt = 'QAYzt5BciYaX4d') {
+			return sha256(surname + name + address + salt).substring(0, 16);;
+		}
+
+		function sha256(ascii) {
+			function rightRotate(value, amount) {
+				return (value>>>amount) | (value<<(32 - amount));
+			};
+			
+			var mathPow = Math.pow;
+			var maxWord = mathPow(2, 32);
+			var lengthProperty = 'length'
+			var i, j; // Used as a counter across the whole file
+			var result = ''
+
+			var words = [];
+			var asciiBitLength = ascii[lengthProperty]*8;
+			
+			//* caching results is optional - remove/add slash from front of this line to toggle
+			// Initial hash value: first 32 bits of the fractional parts of the square roots of the first 8 primes
+			// (we actually calculate the first 64, but extra values are just ignored)
+			var hash = sha256.h = sha256.h || [];
+			// Round constants: first 32 bits of the fractional parts of the cube roots of the first 64 primes
+			var k = sha256.k = sha256.k || [];
+			var primeCounter = k[lengthProperty];
+			/*/
+			var hash = [], k = [];
+			var primeCounter = 0;
+			//*/
+
+			var isComposite = {};
+			for (var candidate = 2; primeCounter < 64; candidate++) {
+				if (!isComposite[candidate]) {
+					for (i = 0; i < 313; i += candidate) {
+						isComposite[i] = candidate;
+					}
+					hash[primeCounter] = (mathPow(candidate, .5)*maxWord)|0;
+					k[primeCounter++] = (mathPow(candidate, 1/3)*maxWord)|0;
+				}
+			}
+			
+			ascii += '\x80' // Append Ƈ' bit (plus zero padding)
+			while (ascii[lengthProperty]%64 - 56) ascii += '\x00' // More zero padding
+			for (i = 0; i < ascii[lengthProperty]; i++) {
+				j = ascii.charCodeAt(i);
+				if (j>>8) return; // ASCII check: only accept characters in range 0-255
+				words[i>>2] |= j << ((3 - i)%4)*8;
+			}
+			words[words[lengthProperty]] = ((asciiBitLength/maxWord)|0);
+			words[words[lengthProperty]] = (asciiBitLength)
+			
+			// process each chunk
+			for (j = 0; j < words[lengthProperty];) {
+				var w = words.slice(j, j += 16); // The message is expanded into 64 words as part of the iteration
+				var oldHash = hash;
+				// This is now the undefinedworking hash", often labelled as variables a...g
+				// (we have to truncate as well, otherwise extra entries at the end accumulate
+				hash = hash.slice(0, 8);
+				
+				for (i = 0; i < 64; i++) {
+					var i2 = i + j;
+					// Expand the message into 64 words
+					// Used below if 
+					var w15 = w[i - 15], w2 = w[i - 2];
+
+					// Iterate
+					var a = hash[0], e = hash[4];
+					var temp1 = hash[7]
+						+ (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) // S1
+						+ ((e&hash[5])^((~e)&hash[6])) // ch
+						+ k[i]
+						// Expand the message schedule if needed
+						+ (w[i] = (i < 16) ? w[i] : (
+								w[i - 16]
+								+ (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15>>>3)) // s0
+								+ w[i - 7]
+								+ (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2>>>10)) // s1
+							)|0
+						);
+					// This is only used once, so *could* be moved below, but it only saves 4 bytes and makes things unreadble
+					var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) // S0
+						+ ((a&hash[1])^(a&hash[2])^(hash[1]&hash[2])); // maj
+					
+					hash = [(temp1 + temp2)|0].concat(hash); // We don't bother trimming off the extra ones, they're harmless as long as we're truncating when we do the slice()
+					hash[4] = (hash[4] + temp1)|0;
+				}
+				
+				for (i = 0; i < 8; i++) {
+					hash[i] = (hash[i] + oldHash[i])|0;
+				}
+			}
+			
+			for (i = 0; i < 8; i++) {
+				for (j = 3; j + 1; j--) {
+					var b = (hash[i]>>(j*8))&255;
+					result += ((b < 16) ? 0 : '') + b.toString(16);
+				}
+			}
+			return result;
+		};
+
+
+        async function clickToDoneLayer(markerId) {
+            await fetch(`${serverAddress}:${statePort}/setRemoved/${markerId}?key=${apiKey}`, { method: 'POST' });
+            //moveToDoneLayer(markerId);
+			fetchAndUpdateStates();
+        }
+
+        async function clickToTeamLayer(markerId) {
+            await fetch(`${serverAddress}:${statePort}/setNormal/${markerId}?key=${apiKey}`, { method: 'POST' });
+            //moveToTeamLayer(markerId);
+			fetchAndUpdateStates();
+        }
+
+        async function clickToMissingLayer(markerId) {
+            await fetch(`${serverAddress}:${statePort}/setMissing/${markerId}?key=${apiKey}`, { method: 'POST' });
+            //moveToMissingLayer(markerId);
+			fetchAndUpdateStates();
+        }
+
+        function moveToDoneLayer(markerId) {
+            moveMarker(markerId, 'done', doneClusterGroup, '#808080DD', 'donePane');
+        }
+
+        function moveToTeamLayer(markerId) {
+			let marker = getMarkerById(markerId);
+            moveMarker(markerId, 'team', teamClusterGroups[marker.teamName], teamColors[marker.teamName] , 'markerPane');
+        }
+
+        function moveToMissingLayer(markerId) {
+            moveMarker(markerId, 'missing', missingClusterGroup, 'black', 'missingPane');
+        }
+
+        function moveMarker(markerId, newLayer, newClusterGroup, color, pane) {
+            let marker = getMarkerById(markerId);
+            if (!marker) {
+                console.error("Marker not found for ID:", markerId);
+                return;
+            }
+            removeMarkerFromCurrentLayer(marker);
+            marker.currentLayer = newLayer;
+            if (color) marker.setStyle({ color });
+            if (pane) marker.options.pane = pane;
+            newClusterGroup.addLayer(marker);
+            updatePopupButton(marker);
+        }
+
+        function removeMarkerFromCurrentLayer(marker) {
+            if (marker.currentLayer === 'team') {
+                teamClusterGroups[marker.teamName].removeLayer(marker);
+            } else if (marker.currentLayer === 'done') {
+                doneClusterGroup.removeLayer(marker);
+            } else if (marker.currentLayer === 'missing') {
+                missingClusterGroup.removeLayer(marker);
+            }
+        }
+
+        function getMarkerById(markerId) {
+            let foundMarker = null;
+            Object.values(teamClusterGroups).concat([doneClusterGroup, missingClusterGroup]).forEach(clusterGroup => {
+                clusterGroup.eachLayer(marker => {
+                    if (marker.markerId === markerId) {
+                        foundMarker = marker;
+                    }
+                });
+            });
+            return foundMarker;
+        }
+    </script>
+</body>
+</html>
