@@ -1,0 +1,21 @@
+{
+  "name": "Christbaum-Sammelaktion",
+  "short_name": "Sammelaktion",
+  "description": "Interaktive Karte für die Christbaum-Sammelaktion",
+  "start_url": "https://herting-j.github.io/christbaum/",
+  "display": "standalone",
+  "background_color": "#fff",
+  "theme_color": "#303f9f",
+  "icons": [
+    {
+      "src": "images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
