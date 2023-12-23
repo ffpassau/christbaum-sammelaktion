@@ -51,19 +51,60 @@
     
         .modal-content {
             background-color: #fefefe;
-            margin: 15% auto; /* 15% from the top and centered */
+            margin: 10% auto;
             padding: 20px;
             border: 1px solid #888;
-            width: 60%; /* Adjust as needed */
+            width: 40%; /* Verkleinern der Breite des Modals */
+            border-radius: 10px;
         }
+        
+        .modal-content h4 {
+            color: #d71921; /* Dunklere Farbe für weniger Aufmerksamkeit */
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-bottom: 10px; /* Reduzierter Abstand zur nächsten Zeile */
+        }
+        
+        .modal-content p {
+            font-family: Arial, sans-serif;
+            text-align: center; /* Zentrieren des Textes */
+            margin-bottom: 20px; /* Größerer Abstand zum Button */
+        }
+        
+        #uploadButton {
+            display: block;
+            width: auto; /* Anpassung der Breite des Buttons */
+            padding: 10px 20px; /* Vertikales und horizontales Padding */
+            background-color: #d71921;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+            margin: 0 auto; /* Zentrierung des Buttons */
+        }
+        
+        
+
+        .popup-button {
+            display: block;
+            width: 150px;
+            margin: 5px auto;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="fileModal" class="modal">
         <div class="modal-content">
-            <h4>Datei auswählen</h4>
-            <p>Bitte wählen sie die Datei aus, welche die Liste der zu sammelnden Bäume enthält.</p>
+            <h4>CSV-Datei auswählen</h4>
+            <p>Bitte wählen Sie die Datei der zu sammelnden Bäume aus.<br>Die Datei darf nicht umbenannt werden, da der Dateiname den Schlüssel enthält.</p>
             <button id="uploadButton">Datei auswählen</button>
             <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
         </div>
@@ -100,6 +141,8 @@
         map.getPane('donePane').style.zIndex = 200;
         map.createPane('missingPane');
         map.getPane('missingPane').style.zIndex = 300;
+        map.createPane('locationMarkerPane');
+        map.getPane('locationMarkerPane').style.zIndex = 500;
 
         // Initialize cluster groups
 		const missingClusterGroup = initClusterGroup('#000000', true);
@@ -220,18 +263,19 @@
             let buttonsHTML = '';
             switch (marker.currentLayer) {
                 case 'done':
-                    buttonsHTML = `<button onclick="clickToTeamLayer('${marker.markerId}')">Erneut hinzufügen</button>`;
+                    buttonsHTML += `<button class="popup-button" onclick="clickToTeamLayer('${marker.markerId}')">Reaktivieren 🔄</button>`;
                     break;
                 case 'missing':
-                    buttonsHTML = `<button onclick="clickToDoneLayer('${marker.markerId}')">Erledigt</button>`;
-                    buttonsHTML += `<button onclick="clickToTeamLayer('${marker.markerId}')">Erneut hinzufügen</button>`;
+                    buttonsHTML += `<button class="popup-button" onclick="clickToDoneLayer('${marker.markerId}')">Erledigt ✅</button>`;
+                    buttonsHTML += `<button class="popup-button" onclick="clickToTeamLayer('${marker.markerId}')">Reaktivieren 🔄</button>`;
                     break;
                 default:
-                    buttonsHTML = `<button onclick="clickToDoneLayer('${marker.markerId}')">Erledigt</button>`;
-                    buttonsHTML += `<button onclick="clickToMissingLayer('${marker.markerId}')">Fehlend</button>`;
+                    buttonsHTML += `<button class="popup-button" onclick="clickToDoneLayer('${marker.markerId}')">Erledigt ✅</button>`;
+                    buttonsHTML += `<button class="popup-button" onclick="clickToMissingLayer('${marker.markerId}')">Fehlend ❓</button>`;
             }
-            marker.bindPopup(`<b>${marker.surname} ${marker.name}</b><br>${marker.address}<br>${buttonsHTML}`);
+            marker.bindPopup(`<b>${marker.surname} ${marker.name}</b><br>${marker.address}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
         }
+        
 
         async function fetchAndUpdateStates() {
 			const response = await fetch(`${serverAddress}:${statePort}/getStates?key=${apiKey}`);
@@ -279,7 +323,8 @@
                 color: 'blue',
                 fillColor: 'blue',
                 fillOpacity: 1,
-                weight: 2
+                weight: 2,
+                pane: 'locationMarkerPane'
             }).addTo(map);
             current_accuracy = L.circle(e.latlng, {
                 radius: radius,
