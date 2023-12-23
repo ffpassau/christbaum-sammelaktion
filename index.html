@@ -86,16 +86,68 @@
             margin: 0 auto; /* Zentrierung des Buttons */
         }
         
-        
+        /* Stil für die Popup-Überschrift */
+        .popup-header {
+            color: #d71921; /* Dunkelrote Farbe für die Überschrift */
+            font-family: Arial, sans-serif;
+            font-size: 14px; /* Reduzierte Schriftgröße für die Überschrift */
+            font-weight: bold; /* Fette Schrift für die Überschrift */
+            text-align: center;
+            margin-top: 5px; /* Verringert den oberen Abstand */
+            margin-bottom: 5px; /* Verringert den unteren Abstand */
+        }
 
+        /* Grundlegende Stile für die Popup-Wrapper und Inhalte */
+        .leaflet-popup-content-wrapper {
+            background-color: #fefefe; /* Weißer Hintergrund */
+            border-radius: 10px; /* Runde Ecken */
+            border: 1px solid #888; /* Grauer Rand */
+            font-family: Arial, sans-serif; /* Schriftart ähnlich der Webseite */
+            padding: 0; /* Entfernt Standard-Padding */
+        }
+
+        .leaflet-popup-content {
+            margin: 12px 12px 0 12px; /* Angepasster Innenabstand, oben links rechts, kein Abstand unten */
+            color: #555; /* Dunkelgraue Schriftfarbe */
+            text-align: left; /* Text linksbündig */
+            font-size: 14px; /* Einheitliche Schriftgröße für den Text */
+        }
+
+        .leaflet-popup-close-button {
+            color: #555; /* Dunkelgraue Schriftfarbe */
+        }
+
+        /* Stil für die Buttons in den Popups */
         .popup-button {
             display: block;
-            width: 150px;
-            margin: 5px auto;
-            text-align: center;
-            box-sizing: border-box;
+            width: 130px; /* Breite der Buttons */
+            padding: 10px; /* Vertikales Padding */
+            margin: 10px auto; /* Zentrierung und vertikaler Abstand */
+            background-color: #cccccc; /* Grauer Hintergrund */
+            color: #333333; /* Dunkelgraue Schrift */
+            border: none;
+            border-radius: 5px; /* Runde Ecken */
+            font-size: 14px; /* Einheitliche Schriftgröße für die Button-Texte */
+            font-weight: bold; /* Fette Schrift für Button-Texte */
+            cursor: pointer;
+            text-align: center; /* Zentrierter Button-Text */
+            box-sizing: border-box; /* Padding und Border innerhalb der Breite */
+            align-items: center;
+            justify-content: center;
         }
-        
+
+        /* Gleichmäßiger Abstand zwischen Emoji und Text */
+        .popup-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Stil für Emoji in den Buttons */
+        .popup-button span {
+            margin-right: 8px; /* Abstand zwischen Emoji und Text */
+        }
+
         
     </style>
 </head>
@@ -273,7 +325,7 @@
                     buttonsHTML += `<button class="popup-button" onclick="clickToDoneLayer('${marker.markerId}')">Erledigt ✅</button>`;
                     buttonsHTML += `<button class="popup-button" onclick="clickToMissingLayer('${marker.markerId}')">Fehlend ❓</button>`;
             }
-            marker.bindPopup(`<b>${marker.surname} ${marker.name}</b><br>${marker.address}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
+            marker.bindPopup(`<span class="popup-header">${marker.surname} ${marker.name}</span><br>${marker.address}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
         }
         
 
