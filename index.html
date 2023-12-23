@@ -172,7 +172,10 @@
 			}
 			overlayMaps["Fehlend"] = missingClusterGroup;
 			overlayMaps["Erledigt"] = doneClusterGroup;			
-			L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);			
+			
+            var isSmartphone = window.matchMedia("only screen and (max-width: 760px)").matches;
+            L.control.layers(null, overlayMaps, { collapsed: isSmartphone }).addTo(map);
+
 			updateLayerControlColors();
 		}
 
