@@ -190,8 +190,13 @@
         const map = L.map('map').setView([48.5665, 13.4312], 13);
         map.addControl(new L.Control.Fullscreen());
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '<a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>',
             maxZoom: 19,
-            attribution: '<a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>'
+            tileSize: 512,
+            zoomOffset: -1,
+            worldCopyJump: true,
+            retina: '@2x',
+            detectRetina: true
         }).addTo(map);
 
         // Create custom panes
