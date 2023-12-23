@@ -36,11 +36,37 @@
         input[type=file] { 
             color: transparent;
         }
+
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Higher than other elements */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.8); /* Black w/ opacity to block out background */
+        }
+    
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 60%; /* Adjust as needed */
+        }
     </style>
 </head>
 <body>
-    <div id="map">
-        <input type="file" id="csvFileInput" accept=".csv">
+    <div id="map"></div>
+    <div id="fileModal" class="modal">
+        <div class="modal-content">
+            <h4>Liste auswählen</h4>
+            <p>Bitte wählen sie die Datei aus, welche die Liste der zu sammelnden Bäume enthält.</p>
+            <button id="uploadButton">Datei auswählen</button>
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+        </div>
     </div>
 
     <!-- Leaflet.js -->
@@ -452,6 +478,27 @@
             return foundMarker;
         }
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = document.getElementById('fileModal');
+            modal.style.display = "block";
+    
+            document.getElementById('uploadButton').addEventListener('click', function() {
+                document.getElementById('csvFileInput').click();
+            });
+    
+            document.getElementById('csvFileInput').addEventListener('change', function(event) {
+                handleFileSelect(event);
+                modal.style.display = "none";
+            });
+        });    
+    
+        // Your existing handleFileSelect function
+        function handleFileSelect(event) {
+            // Your file handling logic
+        }
+    </script>
+    
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
