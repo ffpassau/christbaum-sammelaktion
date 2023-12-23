@@ -262,7 +262,6 @@
             reader.onload = function(e) {
                 processData(e.target.result);
                 addClusterGroupsToControl();
-                fetchAndUpdateStates();
             };
             reader.readAsText(file);
         }
@@ -277,9 +276,13 @@
                         teamClusterGroups[teamName].addTo(map);
                     }
                     for (let i = 0; i < count; i++) {
-                        geocodeAddress(address, teamName, count > 1 ? `${name} #${i + 1}` : name, surname);
+                        geocodePromises.push(geocodeAddress(address, teamName, count > 1 ? `${name} #${i + 1}` : name, surname));
                     }
                 }
+            });
+        
+            Promise.all(geocodePromises).then(() => {
+                fetchAndUpdateStates();
             });
         }
 
@@ -314,12 +317,17 @@
         }
 
         async function geocodeAddress(address, teamName, name, surname) {
-            const response = await fetch(`${serverAddress}:${geoPort}/geocode?address=${encodeURIComponent(address)}`);
-            const data = await response.json();
-            if (data.length > 0) {
-                const { lat, lon } = data[0];
-                addMarkerToMap(lat, lon, teamName, address, name, surname);
-            }
+            return fetch(`${serverAddress}:${geoPort}/geocode?address=${encodeURIComponent(address)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const { lat, lon } = data[0];
+                    addMarkerToMap(lat, lon, teamName, address, name, surname);
+                }
+            })
+            .catch(error => {
+                console.error(`Error geocoding address ${address}:`, error);
+            });
         }
 
         function addMarkerToMap(lat, lon, teamName, address, name, surname) {

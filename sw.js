@@ -6,7 +6,7 @@ self.addEventListener('install', function(event) {
         '/images/icon-512x512.png',
       ].map(url => {
         return cache.add(url).catch(error => {
-          console.error(`Failed to cache ${url}: ${error}`);
+          console.warn(`Failed to cache ${url}: ${error}`);
         });
       }));
     })
