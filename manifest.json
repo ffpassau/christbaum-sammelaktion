@@ -2,7 +2,7 @@
   "name": "Christbaum-Sammelaktion",
   "short_name": "Sammelaktion",
   "description": "Interaktive Karte für die Christbaum-Sammelaktion",
-  "start_url": "https://herting-j.github.io/christbaum/",
+  "start_url": "https://ffpassau.github.io/christbaum-sammelaktion/",
   "display": "standalone",
   "background_color": "#fff",
   "theme_color": "#303f9f",
