@@ -1,9 +1,7 @@
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open('address-map-cache').then(function(cache) {
-      return cache.addAll([
-        '/',
-        '/index.html',      
+      return cache.addAll([     
         '/images/icon-192x192.png',
         '/images/icon-512x512.png',
       ]);
