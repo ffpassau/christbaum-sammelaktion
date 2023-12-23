@@ -189,7 +189,7 @@
         // Initialize the map
         const map = L.map('map').setView([48.5665, 13.4312], 13);
         map.addControl(new L.Control.Fullscreen());
-        /*L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '<a href="https://www.openstreetmap.org/copyright" title="OpenStreetMap is open data licensed under ODbL" target="_blank" class="osm-attrib">&copy; OSM contributors | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>',
             maxZoom: 19,
             tileSize: 512,
@@ -197,14 +197,14 @@
             worldCopyJump: true,
             retina: '@2x',
             detectRetina: true
-        }).addTo(map);*/
-        L.tileLayer('https://{s}.tile.jawg.io/jawg-streets/{z}/{x}/{y}{r}.png?access-token={accessToken}', {
+        }).addTo(map);
+        /*L.tileLayer('https://{s}.tile.jawg.io/jawg-streets/{z}/{x}/{y}{r}.png?access-token={accessToken}', {
             attribution: '<a href="https://jawg.io?utm_medium=map&utm_source=attribution" title="Tiles Courtesy of Jawg Maps" target="_blank" class="jawg-attrib" >&copy; <b>Jawg</b>Maps</a> | <a href="https://www.openstreetmap.org/copyright" title="OpenStreetMap is open data licensed under ODbL" target="_blank" class="osm-attrib">&copy; OSM contributors | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a></a>',
             minZoom: 0,
             maxZoom: 22,
             subdomains: 'abcd',
             accessToken: 'Bm1LZA3VPlV8m8sWNBJ6XzZ3LYwWBa4mtf8RiTasLnyZSf4FMea7K9bXXovAbk4K'
-        }).addTo(map);
+        }).addTo(map);*/
 
         // Create custom panes
         map.createPane('donePane');
