@@ -189,17 +189,21 @@
         // Initialize the map
         const map = L.map('map').setView([48.5665, 13.4312], 13);
         map.addControl(new L.Control.Fullscreen());
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '<a href="https://www.openstreetmap.org/copyright" title="OpenStreetMap is open data licensed under ODbL" target="_blank" class="osm-attrib">&copy; OSM contributors | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>',
+        /*L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}{r}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a> | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>',
+            maxZoom: 19,
+            detectRetina: true
+        }).addTo(map);*/
+        L.tileLayer('https://osm.rrze.fau.de/osmhd/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>, Tiles courtesy of <a href="https://www.rrze.fau.de/" target="_blank">FAU</a> | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>',
             maxZoom: 19,
             tileSize: 512,
             zoomOffset: -1,
-            worldCopyJump: true,
-            retina: '@2x',
             detectRetina: true
         }).addTo(map);
+
         /*L.tileLayer('https://{s}.tile.jawg.io/jawg-streets/{z}/{x}/{y}{r}.png?access-token={accessToken}', {
-            attribution: '<a href="https://jawg.io?utm_medium=map&utm_source=attribution" title="Tiles Courtesy of Jawg Maps" target="_blank" class="jawg-attrib" >&copy; <b>Jawg</b>Maps</a> | <a href="https://www.openstreetmap.org/copyright" title="OpenStreetMap is open data licensed under ODbL" target="_blank" class="osm-attrib">&copy; OSM contributors | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a></a>',
+            attribution: '<a href="https://jawg.io?utm_medium=map&utm_source=attribution" title="Tiles Courtesy of Jawg Maps" target="_blank" class="jawg-attrib" >&copy; <b>Jawg</b>Maps</a> | <a href="https://www.openstreetmap.org/copyright" title="OpenStreetMap is open data licensed under ODbL" target="_blank" class="osm-attrib">&copy; OSM contributors </a> | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>',
             minZoom: 0,
             maxZoom: 22,
             subdomains: 'abcd',
