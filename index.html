@@ -57,6 +57,12 @@
             width: 40%; /* Verkleinern der Breite des Modals */
             border-radius: 10px;
         }
+
+        @media (max-width: 600px) { /* Adjusts for devices with width 600px or less */
+            .modal-content {
+                width: 60%; /* Slightly wider on mobile devices */
+            }
+        }
         
         .modal-content h4 {
             color: #d71921; /* Dunklere Farbe für weniger Aufmerksamkeit */
@@ -156,7 +162,7 @@
     <div id="fileModal" class="modal">
         <div class="modal-content">
             <h4>CSV-Datei auswählen</h4>
-            <p>Bitte wählen Sie die Datei der zu sammelnden Bäume aus.<br>Die Datei darf nicht umbenannt werden, da der Dateiname den Schlüssel enthält.</p>
+            <p>Bitte wählen Sie die Datei der zu sammelnden Bäume aus.<br>Die Datei darf nicht umbenannt werden.</p>
             <button id="uploadButton">Datei auswählen</button>
             <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
         </div>
