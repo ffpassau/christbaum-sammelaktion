@@ -228,7 +228,7 @@
         map.on('locationfound', onLocationFound);
         map.on('locationerror', onLocationError);
         watchUserPosition();
-        setInterval(fetchAndUpdateStates, 5000);
+        setInterval(fetchAndUpdateStates, 4000);
 
         // Functions
         function initClusterGroup(borderColor, addToMap = false) {
@@ -353,6 +353,9 @@
         
 
         async function fetchAndUpdateStates() {
+            if(!apiKey) {
+                return;
+            }
 			const response = await fetch(`${serverAddress}:${statePort}/getStates?key=${apiKey}`);
 			const data = await response.json();
 			const removedIds = new Set(data.removed);
