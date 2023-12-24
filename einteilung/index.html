@@ -1,1 +1,467 @@
-Hallo Welt
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Area Management Application</title>
+    <link rel="icon" type="image/png" href="images/icon-192x192.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <!-- Leaflet Draw Plugin CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <!-- Fullscreen Control CSS -->
+    <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css' rel='stylesheet' />
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .map-button {
+            position: absolute;
+            z-index: 1000;
+            border: none;
+            padding: 10px 15px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 180px; /* Fixed width for all buttons */
+            text-align: center; /* Center button text */
+        }
+        #saveAreasButton, #loadAreasButton, #loadCsvButton {
+            background-color: #cccccc;
+            color: black; /* Black font for grey buttons */            
+        }
+        #saveAreasButton {
+            bottom: 10px; /* Positioned above 'Load Areas' button */
+            left: 10px;
+        }
+        #loadAreasButton {
+            bottom: 60px; /* Positioned at the bottom */
+            left: 10px;
+        }
+        #loadCsvButton {
+            right: 10px;
+            bottom: 60px; /* Positioned at the bottom */
+            
+        }
+        #createCsvButton {
+            background-color: #d71921;
+            color: white; /* White text for 'Create CSV' button */
+            right: 10px;
+            bottom: 10px; /* Positioned at the bottom right */
+        }
+        .info.legend {
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            font-size: 14px;
+            line-height: 22px; /* Increased line height for spacing */
+            color: #555;
+        }
+        .info.legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 5px;
+        }
+        .info.legend div {
+            clear: both;
+        }
+        .legend-text {
+            float: left;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <button id="saveAreasButton" class="map-button">Save Areas to File</button>
+    <button id="loadAreasButton" class="map-button">Load Areas from File</button>
+    <button id="loadCsvButton" class="map-button">Load CSV File</button>
+    <button id="createCsvButton" class="map-button">Create CSV</button>
+    <input type="file" id="fileInput" style="display: none;" accept=".json">
+    <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Leaflet Draw Plugin JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <!-- Fullscreen Control JS -->
+    <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script>
+        // Predefined colors array
+        // Configuration
+        const serverAddress = "https://www.blaulicht.wiki";
+        const geoPort = "5000";
+        const statePort = "5001";
+        let apiKey = "your_api_key";
+        const predefinedColors = ['#FF0000', '#0000FF', '#008000', '#FFA500', '#800080', '#FFFF00', '#FFC0CB', '#A52A2A', '#808080', '#00FFFF'];
+        let colorIndex = 0;
+
+        // Initialize the map with fullscreen control
+        const map = L.map('map', {
+            fullscreenControl: true,
+            fullscreenControlOptions: {
+                position: 'topleft'
+            }
+        }).setView([48.5665, 13.4312], 13);
+
+        /*L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}{r}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a> | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>',
+            maxZoom: 19,
+            detectRetina: true
+        }).addTo(map);*/
+        L.tileLayer('https://osm.rrze.fau.de/osmhd/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>, Tiles courtesy of <a href="https://www.rrze.fau.de/" target="_blank">FAU</a> | <a href="https://www.ffpassau.de/hauptwache/impressum/" target="_blank">Impressum</a>',
+            maxZoom: 19,
+            tileSize: 512,
+            zoomOffset: -1,
+            detectRetina: true
+        }).addTo(map);
+
+        // Global variables to store area details
+        let areas = [];
+        let markers = [];
+        let legend = L.control({ position: 'bottomright' });
+
+        // Initialize Leaflet Draw for drawing polygons
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        const drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnItems,
+            },
+            draw: {
+                polyline: false,
+                rectangle: false,
+                circle: false,
+                circlemarker: false,
+                marker: false,
+                polygon: {
+                    allowIntersection: false,
+                }
+            }
+        });
+        map.addControl(drawControl);
+
+        updateLegend();
+        loadAreasFromLocalStorage();
+
+        // Get the next predefined color or a random color if all predefined colors are used
+        function getNextPredefinedColor() {
+            if (colorIndex >= predefinedColors.length) {
+                return getRandomColor();
+            } else {
+                return predefinedColors[colorIndex++];
+            }
+        }
+
+        // Random color generator
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            return '#' + Array.from({ length: 6 }, () => letters[Math.floor(Math.random() * 16)]).join('');
+        }
+
+        // Function to handle creation of new area
+        map.on(L.Draw.Event.CREATED, function (event) {
+            const layer = event.layer;
+            const areaColor = getNextPredefinedColor();
+            layer.options.color = areaColor;
+
+            let areaName = prompt("Please enter a name for the area:", "New Area");
+            if (areaName === null || areaName === "") {
+                areaName = "Unnamed Area";
+            }
+
+            areas.push({ name: areaName, layer: layer, color: areaColor });
+            drawnItems.addLayer(layer);
+            updateLegend();
+        });
+
+        // Update the legend when an area is deleted
+        map.on(L.Draw.Event.DELETED, function () {
+            areas = areas.filter(a => drawnItems.hasLayer(a.layer));
+            updateLegend();
+        });
+
+        // Add event listeners for buttons
+        document.getElementById('saveAreasButton').addEventListener('click', saveAreasToFile);
+        document.getElementById('loadAreasButton').addEventListener('click', loadAreasFromFile);
+        document.getElementById('createCsvButton').addEventListener('click', createCsv);
+
+        function saveAreasToFile() {
+            const areaData = areas.map(a => ({
+                name: a.name,
+                color: a.color,
+                latlngs: a.layer.getLatLngs()
+            }));
+            const json = JSON.stringify(areaData);
+            const blob = new Blob([json], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+
+            // Trigger download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'areas.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            storeLocally();
+        }
+
+        // Function to load areas from a file
+        function loadAreasFromFile() {
+            document.getElementById('fileInput').click();
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = JSON.parse(e.target.result);
+                    areas = []; // Clear existing areas
+                    colorIndex = 0;
+                    drawnItems.clearLayers(); // Clear existing layers
+                    data.forEach(a => {
+                        const color = getNextPredefinedColor(); // Get the next color in sequence
+                        const layer = L.polygon(a.latlngs, { color: color });
+                        areas.push({ name: a.name, layer: layer, color: color });
+                        drawnItems.addLayer(layer);
+                    });
+                    updateLegend();
+                };
+                reader.readAsText(file);
+            }
+            event.target.value = ''; // Reset file input
+        });
+
+        // Add event listener for the Load CSV button
+        document.getElementById('loadCsvButton').addEventListener('click', function() {
+            document.getElementById('csvFileInput').click();
+        });
+
+        // Event listener for file input change
+        document.getElementById('csvFileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    processCsvData(e.target.result);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function processCsvData(csvData) {
+            const lines = csvData.split('\n');
+            lines.forEach((line, index) => {
+                if (index > 0 && line) {
+                    const parts = line.split(';');
+                    const [name, surname, address, count, teamName] = parts;
+                    if (address) {
+                        geocodeAndAddMarker(address, name, surname, count, teamName);
+                    }
+                }
+            });
+        }
+
+        async function geocodeAndAddMarker(address, name, surname, count, teamName) {
+            const geocodeUrl = `${serverAddress}:${geoPort}/geocode?address=${encodeURIComponent(address)}`;
+            try {
+                const response = await fetch(geocodeUrl);
+                const data = await response.json();
+                if (data.length > 0) {
+                    const { lat, lon } = data[0];
+                    addMarker(lat, lon, name, surname, address, count, teamName);
+                }
+            } catch (error) {
+                console.error("Geocoding error:", error);
+            }
+        }
+
+        function addMarker(lat, lon, name, surname, address, count, teamName) {
+            const marker = L.circleMarker([lat, lon], {
+                color: 'black',
+                radius: 4
+            }).addTo(map);
+
+            // Store marker with its additional data
+            markers.push({
+                marker: marker,
+                name: name,
+                surname: surname,
+                address: address,
+                count: count,
+                teamName: teamName
+            });
+        }
+
+
+        // Utility function to check if a point is inside a polygon
+        function isPointInPolygon(point, polygonLayer) {
+            const latlngs = polygonLayer.getLatLngs()[0]; // Get the first array of coordinates
+            let coordinates = [];
+
+            // Convert Leaflet LatLngs to an array of coordinates
+            latlngs.forEach(latlng => {
+                coordinates.push([latlng.lng, latlng.lat]);
+            });
+
+            // Ensure the polygon is closed by adding the first coordinate at the end if necessary
+            if (coordinates.length > 0 && (coordinates[0][0] !== coordinates[coordinates.length - 1][0] || coordinates[0][1] !== coordinates[coordinates.length - 1][1])) {
+                coordinates.push(coordinates[0]);
+            }
+
+            const polygon = turf.polygon([coordinates]); // turf.polygon expects an array of rings, even if there's only one
+            return turf.inside(turf.point([point.lng, point.lat]), polygon);
+        }
+
+
+
+
+        // Function to create and download the CSV
+        function createCsv() {
+            if(markers.length === 0) {
+                alert("Error: No trees.");
+                return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,";
+            const header = "Name,Surname,Address,Count,TeamName,Area,Longitude,Latitude\n";
+            csvContent += header;
+
+            let treeWithoutArea = false;
+
+            markers.forEach(item => {
+                let areaName = "";
+                for (let area of areas) {
+                    if (isPointInPolygon(item.marker.getLatLng(), area.layer)) {
+                        areaName = area.name;
+                        break;
+                    }
+                }
+
+                if (!areaName) treeWithoutArea = true;
+
+                const line = `${item.name},${item.surname},${item.address},${item.count},${item.teamName},${areaName},${item.marker.getLatLng().lng},${item.marker.getLatLng().lat}\n`;
+                csvContent += line;
+            });
+
+            if (treeWithoutArea) {
+                alert("Error: There is at least one tree that does not belong to any area.");
+                return;
+            }
+
+            storeLocally();
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "trees_with_areas.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function storeLocally() {
+            const areaDataForStorage = areas.map(a => ({
+                name: a.name,
+                latlngs: convertLatLngsToSimpleArray(a.layer.getLatLngs())
+            }));
+            localStorage.setItem('savedAreas', JSON.stringify(areaDataForStorage));
+        }
+
+        function convertLatLngsToSimpleArray(latlngs) {
+            // Check if the first element is an array (indicating complex structure)
+            if (Array.isArray(latlngs[0])) {
+                return latlngs.flat().map(latlng => [latlng.lat, latlng.lng]);
+            } else {
+                return latlngs.map(latlng => [latlng.lat, latlng.lng]);
+            }
+        }
+
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML = areas.map(a => `
+                <div>
+                    <i style="background: ${a.color}"></i>
+                    <span class="legend-text" style="color: ${a.color}">${a.name}</span>
+                </div>
+            `).join('');
+            return div;
+        };
+
+        // Function to update legend with clickable area names
+        function updateLegend() {
+            legend.remove();
+            legend = L.control({ position: 'topright' });
+
+            legend.onAdd = function (map) {
+                var div = L.DomUtil.create('div', 'info legend');
+                div.innerHTML = areas.map((a, index) => `
+                    <div>
+                        <i style="background: ${a.layer.options.color}"></i>
+                        <span class="legend-text" style="color: ${a.layer.options.color}" onclick="renameArea(${index})">${a.name}</span>
+                    </div>
+                `).join('');
+                return div;
+            };
+
+            legend.addTo(map);
+        }
+
+        // Function to rename an area
+        function renameArea(index) {
+            const newName = prompt("Enter new name for the area:", areas[index].name);
+            if (newName !== null && newName !== "") {
+                areas[index].name = newName;
+                updateLegend();
+            }
+        }
+
+        map.on('enterFullscreen', function() {
+            if (!document.fullscreenElement) {
+                document.body.requestFullscreen();
+            }
+        });
+        map.on('exitFullscreen', function() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        });
+
+        function loadAreasFromLocalStorage() {
+            const savedData = localStorage.getItem('savedAreas');
+            if (savedData) {
+                const savedAreas = JSON.parse(savedData);
+                areas = []; // Clear existing areas
+                drawnItems.clearLayers(); // Clear existing layers
+                colorIndex = 0; // Reset color index
+
+                savedAreas.forEach(a => {
+                    if (a.latlngs && a.latlngs.length > 0) {
+                        const color = getNextPredefinedColor(); // Get color for the area
+                        const latlngs = a.latlngs.map(latlngPair => L.latLng(latlngPair[0], latlngPair[1]));
+                        const layer = L.polygon(latlngs, { color: color });
+                        areas.push({ name: a.name, layer: layer });
+                        drawnItems.addLayer(layer);
+                    }
+                });
+
+                updateLegend();
+            }
+        }
+
+
+
+        </script>
+    </body>
+</html>
