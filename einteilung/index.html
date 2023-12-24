@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Area Management Application</title>
+    <title>Einteilung</title>
     <link rel="icon" type="image/png" href="images/icon-192x192.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
     <!-- Leaflet Draw Plugin CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+
     <!-- Fullscreen Control CSS -->
     <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css' rel='stylesheet' />
     <style>
@@ -78,14 +81,21 @@
         .legend-text {
             float: left;
         }
+        .disabled-button {
+            pointer-events: none; /* Disables the button's click events */
+            opacity: 0.5; /* Makes the button appear greyed out */
+        }
+        /* Hover effect for the Create CSV button */
+.leaflet-control-custom a[title="Create CSV"]:hover {
+    background-color: rgba(255, 255, 255, 0.2); /* Slight lightening on hover */
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3); /* Shadow for a "lifted" effect */
+}
+
+        
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <button id="saveAreasButton" class="map-button">Save Areas to File</button>
-    <button id="loadAreasButton" class="map-button">Load Areas from File</button>
-    <button id="loadCsvButton" class="map-button">Load CSV File</button>
-    <button id="createCsvButton" class="map-button">Create CSV</button>
     <input type="file" id="fileInput" style="display: none;" accept=".json">
     <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
     
@@ -102,9 +112,33 @@
         const serverAddress = "https://www.blaulicht.wiki";
         const geoPort = "5000";
         const statePort = "5001";
-        let apiKey = "your_api_key";
         const predefinedColors = ['#FF0000', '#0000FF', '#008000', '#FFA500', '#800080', '#FFFF00', '#FFC0CB', '#A52A2A', '#808080', '#00FFFF'];
         let colorIndex = 0;
+        
+    let apiKey = getUrlParameter('apiKey');
+    if (!apiKey) {
+        apiKey = localStorage.getItem('apiKey');
+        if (!apiKey) {
+            window.onload = function() {
+                setTimeout(function() {
+            // If API key is not found, prompt the user to enter it
+            
+                apiKey = prompt('Please enter your API key:');
+                if (apiKey) {
+                    // Store the API key in local storage
+                    localStorage.setItem('apiKey', apiKey);
+                } else {
+                    alert('API key is required to use this application.');
+                }
+            
+        }, 1000);
+    }
+        }
+    } else {
+        // Store the API key from the URL parameter in local storage
+        localStorage.setItem('apiKey', apiKey);
+    }
+    
 
         // Initialize the map with fullscreen control
         const map = L.map('map', {
@@ -148,13 +182,19 @@
                 marker: false,
                 polygon: {
                     allowIntersection: false,
+                    shapeOptions: {color: '#555'}
                 }
             }
         });
         map.addControl(drawControl);
-
-        updateLegend();
         loadAreasFromLocalStorage();
+        
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
 
         // Get the next predefined color or a random color if all predefined colors are used
         function getNextPredefinedColor() {
@@ -193,11 +233,89 @@
             updateLegend();
         });
 
-        // Add event listeners for buttons
-        document.getElementById('saveAreasButton').addEventListener('click', saveAreasToFile);
-        document.getElementById('loadAreasButton').addEventListener('click', loadAreasFromFile);
-        document.getElementById('createCsvButton').addEventListener('click', createCsv);
+ // Custom Control for Save and Load Buttons
+L.Control.SaveLoadControl = L.Control.extend({
+    onAdd: function(map) {
+        // Create a control container with a particular class
+        var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
 
+        // Save Button
+        var saveButton = L.DomUtil.create('a', 'leaflet-control-custom-button', container);
+        saveButton.title = "Save Areas to File";
+        saveButton.innerHTML = '<i class="fa fa-download"></i>';
+        L.DomEvent.on(saveButton, 'click', this._saveAreas, this);
+
+        // Load Button
+        var loadButton = L.DomUtil.create('a', 'leaflet-control-custom-button', container);
+        loadButton.title = "Load Areas from File";
+        loadButton.innerHTML = '<i class="fa fa-upload"></i>';
+        L.DomEvent.on(loadButton, 'click', this._loadAreas, this);
+
+        return container;
+    },
+
+    _saveAreas: function() {
+        // Invoke the saveAreasToFile function
+        saveAreasToFile();
+    },
+
+    _loadAreas: function() {
+        // Invoke the loadAreasFromFile function
+        loadAreasFromFile();
+    }
+});
+
+// Add the new combined control to the map
+
+map.addControl(new L.Control.SaveLoadControl({ position: 'topleft' }));
+// Custom Control for Load and Save CSV Buttons
+L.Control.LoadSaveCSVControl = L.Control.extend({
+    onAdd: function(map) {
+        var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+
+        // Load CSV Button
+        var loadCSVButton = L.DomUtil.create('a', '', container);
+        loadCSVButton.title = "Load CSV File";
+        loadCSVButton.innerHTML = '<i class="fa fa-file-import"></i>';
+        loadCSVButton.style.width = '40px';
+        loadCSVButton.style.height = '40px';
+        loadCSVButton.style.fontSize = '20px';
+        loadCSVButton.style.lineHeight = '40px';
+        L.DomEvent.on(loadCSVButton, 'click', function() {
+            document.getElementById('csvFileInput').click();
+        });
+
+        // Save CSV Button
+        var saveCSVButton = L.DomUtil.create('a', 'disabled-button', container);
+        saveCSVButton.title = "Create CSV";
+        saveCSVButton.innerHTML = '<i class="fa fa-save" style="color: white;"></i>';
+        saveCSVButton.style.width = '40px';
+        saveCSVButton.style.height = '40px';
+        saveCSVButton.style.fontSize = '20px';
+        saveCSVButton.style.lineHeight = '40px';
+        saveCSVButton.style.backgroundColor = '#d71921';
+        L.DomEvent.on(saveCSVButton, 'click', function() {
+            if (!this.classList.contains('disabled-button')) {
+                createCsv();
+            }
+        });
+
+        return container;
+    }
+});
+
+// Event listener for CSV file input
+document.getElementById('csvFileInput').addEventListener('change', function(event) {
+    if (event.target.files.length > 0) {
+        var saveCSVButton = document.querySelector('.leaflet-control-custom .disabled-button');
+        if (saveCSVButton) {
+            saveCSVButton.classList.remove('disabled-button');
+        }
+    }
+});
+
+
+map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
         function saveAreasToFile() {
             const areaData = areas.map(a => ({
                 name: a.name,
@@ -242,11 +360,6 @@
                 reader.readAsText(file);
             }
             event.target.value = ''; // Reset file input
-        });
-
-        // Add event listener for the Load CSV button
-        document.getElementById('loadCsvButton').addEventListener('click', function() {
-            document.getElementById('csvFileInput').click();
         });
 
         // Event listener for file input change
@@ -326,20 +439,27 @@
         }
 
 
-
-
-        // Function to create and download the CSV
         function createCsv() {
-            if(markers.length === 0) {
+            if (markers.length === 0) {
                 alert("Error: No trees.");
                 return;
             }
+        
+            // Get current date and time
+            const now = new Date();
+            const day = now.getDate(); // Day of the month
+            const hour = now.getHours(); // Hour of the day
+            const minute = now.getMinutes(); // Current minute
+        
+            // Construct the filename
+            const filename = `Bäume_${day}_${hour}_${minute}#${apiKey}.csv`;
+        
             let csvContent = "data:text/csv;charset=utf-8,";
             const header = "Name,Surname,Address,Count,TeamName,Area,Longitude,Latitude\n";
             csvContent += header;
-
+        
             let treeWithoutArea = false;
-
+        
             markers.forEach(item => {
                 let areaName = "";
                 for (let area of areas) {
@@ -348,28 +468,30 @@
                         break;
                     }
                 }
-
+        
                 if (!areaName) treeWithoutArea = true;
-
+        
                 const line = `${item.name},${item.surname},${item.address},${item.count},${item.teamName},${areaName},${item.marker.getLatLng().lng},${item.marker.getLatLng().lat}\n`;
                 csvContent += line;
             });
-
+        
             if (treeWithoutArea) {
                 alert("Error: There is at least one tree that does not belong to any area.");
                 return;
             }
-
+        
             storeLocally();
-
+        
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "trees_with_areas.csv");
+            link.setAttribute("download", filename);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
+        
+
 
         function storeLocally() {
             const areaDataForStorage = areas.map(a => ({
