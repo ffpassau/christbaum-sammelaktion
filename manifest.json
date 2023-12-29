@@ -20,7 +20,7 @@
   ],
   "file_handlers": [
     {
-      "action": "/",
+      "action": "https://ffpassau.github.io/christbaum-sammelaktion/",
       "accept": {
         "text/csv": [".christmas"]
       }
