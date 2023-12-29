@@ -323,6 +323,7 @@ L.Control.LoadSaveCSVControl = L.Control.extend({
     }
 });
 
+window.addEventListener('load', handleFileOpening);
 // Event listener for CSV file input
 document.getElementById('csvFileInput').addEventListener('change', function(event) {
     if (event.target.files.length > 0) {
@@ -384,6 +385,10 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
         // Event listener for file input change
         document.getElementById('csvFileInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
+            processFile(file);
+        });
+
+        function processFile(file) {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -391,7 +396,29 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
                 };
                 reader.readAsText(file);
             }
-        });
+        }
+
+        function handleFileOpening() {
+            if ('launchQueue' in window && 'files' in LaunchParams.prototype) {
+                launchQueue.setConsumer(async (launchParams) => {
+                    if (!launchParams.files.length) {
+                        console.log("No files received in launchParams");
+                        return;
+                    }
+                    const fileHandle = launchParams.files[0];
+                    if (fileHandle.kind === 'file') {
+                        try {
+                            const file = await fileHandle.getFile();
+                            processFile(file);
+                        } catch (error) {
+                            console.error("Error getting file from file handle:", error);
+                        }
+                    } else {
+                        console.error("Received object is not a file handle for a file:", fileHandle);
+                    }
+                });
+            }
+        }
 
         function processCsvData(csvData) {
             clearMarkers();
@@ -509,7 +536,7 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
             const filename = `Bäume_${day}_${hour}_${minute}.christmas`;
         
             let csvContent = "data:text/csv;charset=utf-8,";
-            const header = `Team;Adresse;Nachname;Vorname;Stadtteil;Anzahl;Longitude;Latitude;ID;${apiKey}\n`;
+            const header = `Team;Adresse;Nachname;Vorname;Telefonnummer;Anzahl;Longitude;Latitude;ID;${apiKey}\n`;
             csvContent += header;
         
             let treeWithoutArea = false;

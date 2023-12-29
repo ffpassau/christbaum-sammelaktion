@@ -24,6 +24,12 @@
       "accept": {
         "text/csv": [".christmas"]
       }
+    },
+    {
+      "action": "https://ffpassau.github.io/christbaum-sammelaktion/einteilung.html",
+      "accept": {
+        "text/csv": [".csv"]
+      }
     }
   ]
 }
