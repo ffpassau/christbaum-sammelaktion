@@ -304,6 +304,7 @@
             const lines = csvData.split('\n');
             if (lines.length === 0) {
                 alert('Die ausgewählte Datei enthält keine Daten. Bitte wählen Sie die korrekte CSV-Datei aus.');
+                window.location.reload();
                 return;
             }
             for (let index = 0; index < lines.length; index++) {
@@ -312,6 +313,7 @@
         
                 if (columns.length !== 10) {
                     alert('Die ausgewählte Datei ist inkompatibel. Bitte wählen Sie die korrekte CSV-Datei aus.');
+                    window.location.reload();
                     return;
                 }
         
@@ -403,6 +405,7 @@
         
                 if (response.status === 403) {
                     alert("Zugriff verweigert: Die Datei enthält einen ungültigen API-Schlüssel.");
+                    window.location.reload();
                     return;
                 }
         
@@ -410,7 +413,6 @@
                 const removedIds = new Set(data.removed);
                 const missingIds = new Set(data.missing);
         
-                // Combine all cluster groups into a single array and iterate through them
                 const allClusterGroups = Object.values(teamClusterGroups).concat([doneClusterGroup, missingClusterGroup]);
                 allClusterGroups.forEach(clusterGroup => {
                     clusterGroup.eachLayer(marker => {
@@ -438,7 +440,7 @@
             setTimeout(() => {
                 toast.classList.add("fade-out");
                 toast.addEventListener('transitionend', () => toast.remove());
-            }, 3830); // The toast will disappear after 3 seconds
+            }, 3830);
         }       
 
 
@@ -566,28 +568,7 @@
             });
             return foundMarker;
         }
-    </script>
-    <script>
-        /*document.addEventListener('DOMContentLoaded', function() {
-            var modal = document.getElementById('fileModal');
-            modal.style.display = "block";
-    
-            document.getElementById('uploadButton').addEventListener('click', function() {
-                document.getElementById('csvFileInput').click();
-            });
-    
-            document.getElementById('csvFileInput').addEventListener('change', function(event) {
-                handleFileSelect(event);
-                modal.style.display = "none";
-            });
-        });    
-    
-        // Your existing handleFileSelect function
-        function handleFileSelect(event) {
-            // Your file handling logic
-        }*/
-    </script>
-    
+    </script>    
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
