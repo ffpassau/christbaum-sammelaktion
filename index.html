@@ -302,23 +302,34 @@
 
         function processData(csvData) {
             const lines = csvData.split('\n');
+            if (lines.length === 0) {
+                alert('Die ausgewählte Datei enthält keine Daten. Bitte wählen Sie die korrekte CSV-Datei aus.');
+                return;
+            }
             lines.forEach((line, index) => {
-                if(index === 0) {
-                    const [name, surname, address, count, district,teamName,lon,lat, id, newApiKey] = line.split(';');
-                    apiKey = newApiKey;
+                const columns = line.split(';');
+        
+                if (columns.length !== 10) {
+                    alert('Die ausgewählte Datei ist inkompatibel. Bitte wählen Sie die korrekte CSV-Datei aus.');
+                    return;
                 }
-                else if (index > 0 && line) {
-                    const [name, surname, address, count, district,teamName,lon,lat, id, empty] = line.split(';');
+        
+                if (index === 0) {
+                    const [name, surname, address, count, district, teamName, lon, lat, id, newApiKey] = columns;
+                    apiKey = newApiKey;
+                } else if (line) {
+                    const [name, surname, address, count, district, teamName, lon, lat, id, empty] = columns;
                     if (!teamClusterGroups[teamName]) {
                         teamClusterGroups[teamName] = initClusterGroup(getTeamColor(teamName));
                         teamClusterGroups[teamName].addTo(map);
                     }
                     for (let i = 0; i < count; i++) {
-                        addMarkerToMap(lat,lon,address, teamName, count > 1 ? `${name} #${i + 1}` : name, surname, id);
+                        addMarkerToMap(lat, lon, address, teamName, count > 1 ? `${name} #${i + 1}` : name, surname, id);
                     }
                 }
             });
         }
+        
 
         function addClusterGroupsToControl() {
 			const overlayMaps = {};
