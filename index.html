@@ -300,7 +300,11 @@
                         return;
                     }
                     const file = launchParams.files[0];
-                    processFile(file);
+                    if (file instanceof File) {
+                        processFile(file);
+                    } else {
+                        console.error("Received object is not a File:", file);
+                    }
                 });
             }
         }
