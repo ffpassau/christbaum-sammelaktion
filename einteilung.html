@@ -394,6 +394,7 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
         });
 
         function processCsvData(csvData) {
+            clearMarkers();
             const lines = csvData.split('\n');
             lines.forEach((line, index) => {
                 if (index > 0 && line) {
@@ -404,6 +405,13 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
                     }
                 }
             });
+        }
+
+        function clearMarkers() {
+            markers.forEach(item => {
+                map.removeLayer(item.marker);
+            });
+            markers = []; // Reset the markers array
         }
 
         function sanitizeField(field) {
