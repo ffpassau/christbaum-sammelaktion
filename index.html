@@ -392,7 +392,7 @@
                     buttonsHTML += `<button class="popup-button" onclick="clickToDoneLayer('${marker.markerId}')">Erledigt ✅</button>`;
                     buttonsHTML += `<button class="popup-button" onclick="clickToMissingLayer('${marker.markerId}')">Fehlend ❓</button>`;
             }
-            marker.bindPopup(`<span class="popup-header">${marker.surname} ${marker.name}</span><br>${marker.address}<br>Tel.: ${marker.telNumber}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
+            marker.bindPopup(`<span class="popup-header">${marker.surname} ${marker.name}</span><br>${marker.address}<br>Tel. ${marker.telNumber}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
         }
         
 
