@@ -258,6 +258,7 @@
 		const doneClusterGroup = initClusterGroup('#808080', false);
 
         // Event listeners
+        window.addEventListener('load', handleFileOpening);
         document.getElementById('fileModal').style.display = "block";
         document.getElementById('csvFileInput').addEventListener('change', handleFileSelect, false);
         document.getElementById('uploadButton').addEventListener('click', function() {
@@ -289,7 +290,22 @@
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
-        
+            processFile(file);
+        }
+
+        function handleFileOpening() {
+            if ('launchQueue' in window && 'files' in LaunchParams.prototype) {
+                launchQueue.setConsumer((launchParams) => {
+                    if (!launchParams.files.length) {
+                        return;
+                    }
+                    const file = launchParams.files[0];
+                    processFile(file);
+                });
+            }
+        }
+
+        function processFile(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 processData(e.target.result);

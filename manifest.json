@@ -18,4 +18,12 @@
       "type": "image/png"
     }
   ]
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/csv": [".christmas"]
+      }
+    }
+  ]
 }
