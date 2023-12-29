@@ -488,10 +488,10 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
             const minute = now.getMinutes(); // Current minute
         
             // Construct the filename
-            const filename = `Bäume_${day}_${hour}_${minute}#${apiKey}#.csv`;
+            const filename = `Bäume_${day}_${hour}_${minute}.csv`;
         
             let csvContent = "data:text/csv;charset=utf-8,";
-            const header = "Name;Surname;Address;Count;District;Area;Longitude;Latitude;ID\n";
+            const header = `Name;Surname;Address;Count;District;Area;Longitude;Latitude;ID;${apiKey}\n`;
             csvContent += header;
         
             let treeWithoutArea = false;
@@ -507,7 +507,7 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
         
                 if (!areaName) treeWithoutArea = true;
         
-                const line = `${item.name};${item.surname};${item.address};${item.count};${item.district};${areaName};${item.marker.getLatLng().lng};${item.marker.getLatLng().lat};${item.id}\n`;
+                const line = `${item.name};${item.surname};${item.address};${item.count};${item.district};${areaName};${item.marker.getLatLng().lng};${item.marker.getLatLng().lat};${item.id};\n`;
                 csvContent += line;
             });
         

@@ -155,6 +155,27 @@
             margin-right: 8px; /* Abstand zwischen Emoji und Text */
         }
 
+        .toast {
+            z-index: 1000;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            opacity: 0.9;
+            transition: opacity 0.5s;
+        }
+        
+        .toast.fade-out {
+            opacity: 0;
+        }
+        
+        .toast-error {
+            background-color: #d71921;
+        }
+        
         
     </style>
 </head>
@@ -163,7 +184,7 @@
     <div id="fileModal" class="modal">
         <div class="modal-content">
             <h4>CSV-Datei auswählen</h4>
-            <p>Bitte wählen Sie die Datei der zu sammelnden Bäume aus.<br>Die Datei darf nicht umbenannt werden.</p>
+            <p>Bitte wählen Sie die Datei der zu sammelnden Bäume aus.</p>
             <button id="uploadButton">Datei auswählen</button>
             <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
         </div>
@@ -236,7 +257,11 @@
 		const doneClusterGroup = initClusterGroup('#808080', false);
 
         // Event listeners
+        document.getElementById('fileModal').style.display = "block";
         document.getElementById('csvFileInput').addEventListener('change', handleFileSelect, false);
+        document.getElementById('uploadButton').addEventListener('click', function() {
+            document.getElementById('csvFileInput').click();
+        });
         map.on('locationfound', onLocationFound);
         map.on('locationerror', onLocationError);
         watchUserPosition();
@@ -264,12 +289,6 @@
         function handleFileSelect(event) {
             const file = event.target.files[0];
         
-            // Extract the API key from the file name
-            const fileNameParts = file.name.split('#');
-            if (fileNameParts.length > 1) {
-                apiKey = fileNameParts[1].split('.')[0]; // Extract the API key
-            }
-        
             const reader = new FileReader();
             reader.onload = function(e) {
                 processData(e.target.result);
@@ -277,13 +296,18 @@
                 fetchAndUpdateStates();
             };
             reader.readAsText(file);
+            document.getElementById('fileModal').style.display = "none";
         }
 
         function processData(csvData) {
             const lines = csvData.split('\n');
             lines.forEach((line, index) => {
-                if (index > 0 && line) {
-                    const [name, surname, address, count, district,teamName,lon,lat, id] = line.split(';');
+                if(index === 0) {
+                    const [name, surname, address, count, district,teamName,lon,lat, id, newApiKey] = line.split(';');
+                    apiKey = newApiKey;
+                }
+                else if (index > 0 && line) {
+                    const [name, surname, address, count, district,teamName,lon,lat, id, empty] = line.split(';');
                     if (!teamClusterGroups[teamName]) {
                         teamClusterGroups[teamName] = initClusterGroup(getTeamColor(teamName));
                         teamClusterGroups[teamName].addTo(map);
@@ -359,25 +383,49 @@
             if(!apiKey || apiKey === 'None') {
                 return;
             }
-			const response = await fetch(`${serverAddress}:${statePort}/getStates?key=${apiKey}`);
-			const data = await response.json();
-			const removedIds = new Set(data.removed);
-			const missingIds = new Set(data.missing);
-
-			// Combine all cluster groups into a single array and iterate through them
-			const allClusterGroups = Object.values(teamClusterGroups).concat([doneClusterGroup, missingClusterGroup]);
-			allClusterGroups.forEach(clusterGroup => {
-				clusterGroup.eachLayer(marker => {
-					if (removedIds.has(marker.markerId) && marker.currentLayer !== 'done') {
-						moveToDoneLayer(marker.markerId);
-					} else if (missingIds.has(marker.markerId) && marker.currentLayer !== 'missing') {
-						moveToMissingLayer(marker.markerId);
-					} else if (!removedIds.has(marker.markerId) && !missingIds.has(marker.markerId) && marker.currentLayer !== 'team') {
-						moveToTeamLayer(marker.markerId);
-					}
-				});
-			});
-		}
+        
+            try {
+                const response = await fetch(`${serverAddress}:${statePort}/getStates?key=${apiKey}`);
+        
+                if (response.status === 403) {
+                    alert("Zugriff verweigert: Die Datei enthält einen ungültigen API-Schlüssel.");
+                    return;
+                }
+        
+                const data = await response.json();
+                const removedIds = new Set(data.removed);
+                const missingIds = new Set(data.missing);
+        
+                // Combine all cluster groups into a single array and iterate through them
+                const allClusterGroups = Object.values(teamClusterGroups).concat([doneClusterGroup, missingClusterGroup]);
+                allClusterGroups.forEach(clusterGroup => {
+                    clusterGroup.eachLayer(marker => {
+                        if (removedIds.has(marker.markerId) && marker.currentLayer !== 'done') {
+                            moveToDoneLayer(marker.markerId);
+                        } else if (missingIds.has(marker.markerId) && marker.currentLayer !== 'missing') {
+                            moveToMissingLayer(marker.markerId);
+                        } else if (!removedIds.has(marker.markerId) && !missingIds.has(marker.markerId) && marker.currentLayer !== 'team') {
+                            moveToTeamLayer(marker.markerId);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error("Error fetching states: ", error);
+                showToast("Keine Verbindung", "error");
+            }
+        }
+        
+        function showToast(message, type) {
+            const toast = document.createElement("div");
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+        
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add("fade-out");
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3830); // The toast will disappear after 3 seconds
+        }       
 
 
         function getTeamColor(teamName) {
@@ -506,7 +554,7 @@
         }
     </script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        /*document.addEventListener('DOMContentLoaded', function() {
             var modal = document.getElementById('fileModal');
             modal.style.display = "block";
     
@@ -523,7 +571,7 @@
         // Your existing handleFileSelect function
         function handleFileSelect(event) {
             // Your file handling logic
-        }
+        }*/
     </script>
     
     <script>
