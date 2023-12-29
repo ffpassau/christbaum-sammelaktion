@@ -309,7 +309,7 @@
             }
             for (let index = 0; index < lines.length; index++) {
                 const line = lines[index];
-                const columns = line.split(';');
+                const columns = line.split(',');
         
                 if (line && columns.length !== 10) {
                     alert('Die ausgewählte Datei ist inkompatibel. Bitte wählen Sie die korrekte CSV-Datei aus.');
@@ -318,17 +318,17 @@
                 }
         
                 if (index === 0) {
-                    const [name, surname, address, count, district, teamName, lon, lat, id, newApiKey] = columns;
+                        const [teamName, address, surname, name, telNumber, count, lon, lat, id, newApiKey] = columns;
                     apiKey = newApiKey;
                 } else if (line) {
-                    const [name, surname, address, count, district, teamName, lon, lat, id, empty] = columns;
+                    const [teamName, address, surname, name, telNumber, count, lon, lat, id, empty] = columns;
                     if (!teamClusterGroups[teamName]) {
                         teamClusterGroups[teamName] = initClusterGroup(getTeamColor(teamName));
                         teamClusterGroups[teamName].addTo(map);
                     }
                     for (let i = 0; i < count; i++) {
-                        addMarkerToMap(lat, lon, address, teamName, count > 1 ? `${name} #${i + 1}` : name, surname, id);
-                    }
+                        addMarkerToMap(lat, lon, address, teamName, telNumber, count > 1 ? `${name} #${i + 1}` : name, surname, `${id}_${i}`);
+                    }                    
                 }
             }
         }
@@ -365,14 +365,15 @@
             });
         }
 
-        function addMarkerToMap(lat, lon, address, teamName, name, surname, id) {
+        function addMarkerToMap(lat, lon, address, teamName, telNumber, name, surname, id) {
             const marker = L.circleMarker([lat, lon], { color: teamColors[teamName] });
             marker.markerId = id;
             marker.currentLayer = 'team';
             marker.teamName = teamName;
+            marker.telNumber = telNumber;
             marker.name = name;
             marker.surname = surname;
-            marker.address = address;
+            marker.address = address.replace(/;/g, ',');
             updatePopupButton(marker);
             teamClusterGroups[teamName].addLayer(marker);
         }
@@ -391,7 +392,7 @@
                     buttonsHTML += `<button class="popup-button" onclick="clickToDoneLayer('${marker.markerId}')">Erledigt ✅</button>`;
                     buttonsHTML += `<button class="popup-button" onclick="clickToMissingLayer('${marker.markerId}')">Fehlend ❓</button>`;
             }
-            marker.bindPopup(`<span class="popup-header">${marker.surname} ${marker.name}</span><br>${marker.address}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
+            marker.bindPopup(`<span class="popup-header">${marker.surname} ${marker.name}</span><br>${marker.address}<br>Tel.: ${marker.telNumber}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
         }
         
 

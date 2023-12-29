@@ -397,10 +397,10 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
             const lines = csvData.split('\n');
             lines.forEach((line, index) => {
                 if (index > 0 && line) {
-                    const parts = line.split(';').map(field => sanitizeField(field));
-                    const [name, surname, address, count, teamName] = parts;
+                    const parts = line.split(',').map(field => sanitizeField(field));
+                    const [name, surname, address, count, districtIngored, telNumber] = parts;
                     if (address) {
-                        geocodeAndAddMarker(address, name, surname, count, teamName);
+                        geocodeAndAddMarker(address, name, surname, count, telNumber);
                     }
                 }
             });
@@ -412,17 +412,18 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
                         .replace(/</g, '&lt;')
                         .replace(/>/g, '&gt;')
                         .replace(/"/g, '&quot;')
+                        .replace(/,/g, ';')
                         .replace(/'/g, '&#39;');
         }
 
-        async function geocodeAndAddMarker(address, name, surname, count, district) {
+        async function geocodeAndAddMarker(address, name, surname, count, telNumber) {
             const geocodeUrl = `${serverAddress}:${geoPort}/geocode?address=${encodeURIComponent(address)}`;
             try {
                 const response = await fetch(geocodeUrl);
                 const data = await response.json();
                 if (data.length > 0 && data[0].hasOwnProperty('lat') && data[0].hasOwnProperty('lon')) {
                     const { lat, lon } = data[0];
-                    addMarker(lat, lon, name, surname, address, count, district);
+                    addMarker(lat, lon, name, surname, address, count, telNumber);
                 } else {
                     alert(`Fehler bei Suche nach Adresse: Kein valides Ergebnis für "${address}".`);
                 }
@@ -433,7 +434,7 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
         }
         
 
-        function addMarker(lat, lon, name, surname, address, count, district) {
+        function addMarker(lat, lon, name, surname, address, count, telNumber) {
             const marker = L.circleMarker([lat, lon], {
                 color: 'black',
                 radius: 4
@@ -446,7 +447,7 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
                 surname: surname,
                 address: address,
                 count: count,
-                district: district,
+                telNumber: telNumber,
                 id: generateHashCode(surname, name, address, apiKey)
             });
         }
@@ -500,26 +501,26 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
             const filename = `Bäume_${day}_${hour}_${minute}.csv`;
         
             let csvContent = "data:text/csv;charset=utf-8,";
-            const header = `Name;Surname;Address;Count;District;Area;Longitude;Latitude;ID;${apiKey}\n`;
+            const header = `Team,Adresse,Nachname,Vorname,Stadtteil,Anzahl,Longitude,Latitude,ID,${apiKey}\n`;
             csvContent += header;
         
             let treeWithoutArea = false;
         
             markers.forEach(item => {
-                let areaName = "";
+                let teamName = "";
                 for (let area of areas) {
                     if (isPointInPolygon(item.marker.getLatLng(), area.layer)) {
-                        areaName = area.name;
+                        teamName = area.name;
                         break;
                     }
                 }
         
-                if (!areaName){
+                if (!teamName){
                     alert("Fehler: Es gibt Bäume, für die keine Zuordnung besteht.");
                     return;
                 };
         
-                const line = `${item.name};${item.surname};${item.address};${item.count};${item.district};${areaName};${item.marker.getLatLng().lng};${item.marker.getLatLng().lat};${item.id};\n`;
+                const line = `${teamName},${item.address},${item.surname},${item.name},${item.telNumber},${item.count},${item.marker.getLatLng().lng},${item.marker.getLatLng().lat},${item.id},\n`;
                 csvContent += line;
             });
             
