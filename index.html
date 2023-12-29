@@ -302,7 +302,7 @@
 
         function processData(csvData) {
             const lines = csvData.split('\n');
-            if (lines.length === 0) {
+            if (lines.length === 0 || !lines[0]) {
                 alert('Die ausgewählte Datei enthält keine Daten. Bitte wählen Sie die korrekte CSV-Datei aus.');
                 window.location.reload();
                 return;
