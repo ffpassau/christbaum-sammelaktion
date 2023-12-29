@@ -397,13 +397,22 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
             const lines = csvData.split('\n');
             lines.forEach((line, index) => {
                 if (index > 0 && line) {
-                    const parts = line.split(';');
+                    const parts = line.split(';').map(field => sanitizeField(field));
                     const [name, surname, address, count, teamName] = parts;
                     if (address) {
                         geocodeAndAddMarker(address, name, surname, count, teamName);
                     }
                 }
             });
+        }
+
+        function sanitizeField(field) {
+            // Replace special characters with HTML entities to prevent HTML injection
+            return field.replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
         }
 
         async function geocodeAndAddMarker(address, name, surname, count, district) {
@@ -505,16 +514,14 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
                     }
                 }
         
-                if (!areaName) treeWithoutArea = true;
+                if (!areaName){
+                    alert("Fehler: Es gibt Bäume, für die keine Zuordnung besteht.");
+                    return;
+                };
         
                 const line = `${item.name};${item.surname};${item.address};${item.count};${item.district};${areaName};${item.marker.getLatLng().lng};${item.marker.getLatLng().lat};${item.id};\n`;
                 csvContent += line;
             });
-        
-            if (treeWithoutArea) {
-                alert("Fehler: Es gibt Bäume, für die keine Zuordnung besteht.");
-                return;
-            }
             
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
