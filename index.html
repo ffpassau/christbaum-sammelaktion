@@ -306,7 +306,8 @@
                 alert('Die ausgewählte Datei enthält keine Daten. Bitte wählen Sie die korrekte CSV-Datei aus.');
                 return;
             }
-            lines.forEach((line, index) => {
+            for (let index = 0; index < lines.length; index++) {
+                const line = lines[index];
                 const columns = line.split(';');
         
                 if (columns.length !== 10) {
@@ -327,8 +328,9 @@
                         addMarkerToMap(lat, lon, address, teamName, count > 1 ? `${name} #${i + 1}` : name, surname, id);
                     }
                 }
-            });
+            }
         }
+        
         
 
         function addClusterGroupsToControl() {
