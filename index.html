@@ -311,7 +311,7 @@
                 const line = lines[index];
                 const columns = line.split(';');
         
-                if (columns.length !== 10) {
+                if (line && columns.length !== 10) {
                     alert('Die ausgewählte Datei ist inkompatibel. Bitte wählen Sie die korrekte CSV-Datei aus.');
                     window.location.reload();
                     return;
