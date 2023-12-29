@@ -325,14 +325,14 @@ L.Control.LoadSaveCSVControl = L.Control.extend({
 
 window.addEventListener('load', handleFileOpening);
 // Event listener for CSV file input
-document.getElementById('csvFileInput').addEventListener('change', function(event) {
+/*document.getElementById('csvFileInput').addEventListener('change', function(event) {
     if (event.target.files.length > 0) {
         var saveCSVButton = document.querySelector('.leaflet-control-custom .disabled-button');
         if (saveCSVButton) {
             saveCSVButton.classList.remove('disabled-button');
         }
     }
-});
+});*/
 
 
 map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
@@ -349,7 +349,7 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
             // Trigger download
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'areas.json';
+            a.download = 'Gebiete.json';
             a.click();
             URL.revokeObjectURL(url);
             storeLocally();
@@ -395,6 +395,10 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
                     processCsvData(e.target.result);
                 };
                 reader.readAsText(file);
+            }
+            var saveCSVButton = document.querySelector('.leaflet-control-custom .disabled-button');
+            if (saveCSVButton) {
+                saveCSVButton.classList.remove('disabled-button');
             }
         }
 
