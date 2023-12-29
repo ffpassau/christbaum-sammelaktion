@@ -295,19 +295,26 @@
 
         function handleFileOpening() {
             if ('launchQueue' in window && 'files' in LaunchParams.prototype) {
-                launchQueue.setConsumer((launchParams) => {
+                launchQueue.setConsumer(async (launchParams) => {
                     if (!launchParams.files.length) {
+                        console.log("No files received in launchParams");
                         return;
                     }
-                    const file = launchParams.files[0];
-                    if (file instanceof File) {
-                        processFile(file);
+                    const fileHandle = launchParams.files[0];
+                    if (fileHandle.kind === 'file') {
+                        try {
+                            const file = await fileHandle.getFile();
+                            processFile(file);
+                        } catch (error) {
+                            console.error("Error getting file from file handle:", error);
+                        }
                     } else {
-                        console.error("Received object is not a File:", file);
+                        console.error("Received object is not a file handle for a file:", fileHandle);
                     }
                 });
             }
         }
+        
 
         function processFile(file) {
             const reader = new FileReader();
