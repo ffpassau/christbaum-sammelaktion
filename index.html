@@ -348,7 +348,8 @@
                         const [teamName, address, surname, name, telNumber, count, lon, lat, id, newApiKey] = columns;
                     apiKey = newApiKey;
                 } else if (line) {
-                    const [teamName, address, surname, name, telNumber, count, lon, lat, id, empty] = columns;
+                    const [teamName, address, surname, name, telNumber, countRaw, lon, lat, id, empty] = columns;
+                    const count = countRaw || 1;
                     if (!teamClusterGroups[teamName]) {
                         teamClusterGroups[teamName] = initClusterGroup(getTeamColor(teamName));
                         teamClusterGroups[teamName].addTo(map);
