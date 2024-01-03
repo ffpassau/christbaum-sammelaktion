@@ -94,6 +94,7 @@
 
         
     </style>
+    <script src="streetNames.js"></script>
 </head>
 <body>
     <div id="map"></div>
@@ -107,6 +108,8 @@
     <!-- Fullscreen Control JS -->
     <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+
     <script>
         // Predefined colors array
         // Configuration
@@ -308,6 +311,7 @@ L.Control.LoadSaveCSVControl = L.Control.extend({
         var saveCSVButton = L.DomUtil.create('a', 'disabled-button', container);
         saveCSVButton.title = "Datei für Sammelaktion erstellen";
         saveCSVButton.innerHTML = '<i class="fa fa-save" style="color: white;"></i>';
+        saveCSVButton.id = "saveCsvButton";
         saveCSVButton.style.width = '40px';
         saveCSVButton.style.height = '40px';
         saveCSVButton.style.fontSize = '20px';
@@ -427,16 +431,87 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
         function processCsvData(csvData) {
             clearMarkers();
             const lines = csvData.split('\n');
+            // Start processing from the third line (index 2)
             lines.forEach((line, index) => {
-                if (index > 0 && line) {
-                    const parts = line.split(',').map(field => sanitizeField(field));
-                    const [name, surname, address, count, districtIngored, telNumber] = parts;
-                    if (address) {
-                        geocodeAndAddMarker(address, name, surname, count, telNumber);
+                if (index > 1 && line) {
+                    const parts = line.split(';').map(field => sanitizeField(field));
+                    // Update the indices according to the new CSV format
+                    const [firstName, lastName, , streetAddress, , city, postalCode, , email, count, , , , , entryId] = parts;
+                    if (streetAddress && streetAddress.indexOf('@') == -1) {
+                        geocodeAndAddMarker(streetAddress, postalCode, firstName, lastName, count, email, entryId);
                     }
                 }
             });
         }
+
+        function cleanAddress(address) {
+            // Regular expression to match the street name and number, with an optional letter
+            const regex = /.*?\d+[ ]?[A-Za-z]?/;
+            const match = address.match(regex);
+
+            if (match) {
+                return match[0];
+            }
+            return address; // Return original address if no match is found
+        }
+
+        // Levenshtein Distance function
+        function levenshteinDistance(a, b) {
+            const matrix = [];
+
+            for (let i = 0; i <= b.length; i++) {
+                matrix[i] = [i];
+            }
+
+            for (let j = 0; j <= a.length; j++) {
+                matrix[0][j] = j;
+            }
+
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, // substitution
+                                                Math.min(matrix[i][j - 1] + 1, // insertion
+                                                        matrix[i - 1][j] + 1)); // deletion
+                    }
+                }
+            }
+
+            return matrix[b.length][a.length];
+        }
+
+        // Normalization function
+        function normalizeStreetName(name) {
+            return name.replace(/(straße|strasse|str\.|str)(?=\b|$)/gi, 'straße').trim().toLowerCase();
+        }
+
+
+        async function correctAddress(address, streetNames) {
+            // Normalize and split the address
+            let normalizedAddress = normalizeStreetName(address);
+            let addressComponents = normalizedAddress.match(/(\D+)(\d.*)/);
+            if (!addressComponents) return null;
+
+            let streetPart = addressComponents[1].trim();
+            let minDistance = Infinity;
+            let correctedAddress = null;
+
+            for (let street of streetNames) {
+                let normalizedStreet = normalizeStreetName(street);
+                let distance = levenshteinDistance(normalizedStreet, streetPart);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    correctedAddress = street + ' ' + addressComponents[2];
+                }
+            }
+
+            // Check if the corrected address is different from the original and if the distance is within an acceptable range
+            return (minDistance < 3 && correctedAddress !== address) ? correctedAddress : null; // Adjust the distance threshold as needed
+        }
+
 
         function clearMarkers() {
             markers.forEach(item => {
@@ -450,30 +525,49 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
             return field.replace(/&/g, '&amp;')
                         .replace(/</g, '&lt;')
                         .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
+                        .replace(/"/g, '')
                         .replace(/;/g, ' ')
                         .replace(/'/g, '&#39;');
         }
 
-        async function geocodeAndAddMarker(address, name, surname, count, telNumber) {
-            const geocodeUrl = `${serverAddress}:${geoPort}/geocode?address=${encodeURIComponent(address)}`;
+        async function geocodeAndAddMarker(streetAddress, zip, name, surname, count, telNumber, entryId) {
+            const cleanedAddress = cleanAddress(streetAddress);
+            const fullCleanAddress = cleanedAddress  + " " + zip + " Passau";
+            const fullUnchangedAdress = streetAddress + "<br>" + zip + " Passau";
+            const geocodeUrl = `${serverAddress}:${geoPort}/geocode?address=${encodeURIComponent(fullCleanAddress)}`;
             try {
                 const response = await fetch(geocodeUrl);
                 const data = await response.json();
                 if (data.length > 0 && data[0].hasOwnProperty('lat') && data[0].hasOwnProperty('lon')) {
                     const { lat, lon } = data[0];
-                    addMarker(lat, lon, name, surname, address, count, telNumber);
+                    addMarker(lat, lon, name, surname, fullUnchangedAdress, count, telNumber, entryId);
                 } else {
-                    alert(`Fehler bei Suche nach Adresse: Kein valides Ergebnis für "${address}".`);
+                    const correctedAddress = await correctAddress(cleanedAddress, streetNames);
+                    if (correctedAddress) {
+                        alert(`Adresse "${cleanedAddress}" korrigiert zu: "${correctedAddress}".`);
+                        return geocodeAndAddMarker(correctedAddress, zip, name, surname, count, telNumber, entryId);
+                        // Retry geocoding with corrected address
+                        // You may need to adjust this logic based on how you implement address correction
+                    } else {
+                        alert(`Fehler bei Suche nach Adresse: Kein valides Ergebnis für "${streetAddress}, ${zip} Passau".\n\nUm eine Abholdatei erstellen zu können, müssen Sie die Adresse händisch in der CSV-Datei bearbeiten.`);
+                        disableCreateCsvButton();
+                    }
                 }
             } catch (error) {
                 console.error("Geocoding error:", error);
-                alert(`Fehler bei Suche nach Adresse: Systemfehler während der Verarbeitung von "${address}".`);
+                alert(`Fehler bei Suche nach Adresse: Systemfehler während der Verarbeitung von "${streetAddress}, ${zip} Passau".`);
+            }
+        }
+
+        function disableCreateCsvButton() {
+            const saveCSVButton = document.getElementById('saveCsvButton');
+            if (saveCSVButton) {
+                saveCSVButton.classList.add('disabled-button'); // Add the 'disabled-button' class to disable it
             }
         }
         
 
-        function addMarker(lat, lon, name, surname, address, count, telNumber) {
+        function addMarker(lat, lon, name, surname, address, count, telNumber, entryId) {
             const marker = L.circleMarker([lat, lon], {
                 color: 'black',
                 radius: 4
@@ -487,7 +581,8 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
                 address: address,
                 count: count,
                 telNumber: telNumber,
-                id: generateHashCode(surname, name, address, apiKey)
+                //id: generateHashCode(surname, name, address, apiKey)
+                id: entryId
             });
         }
 
