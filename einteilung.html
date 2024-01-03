@@ -431,18 +431,47 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
         function processCsvData(csvData) {
             clearMarkers();
             const lines = csvData.split('\n');
-            // Start processing from the third line (index 2)
+
             lines.forEach((line, index) => {
                 if (index > 1 && line) {
-                    const parts = line.split(';').map(field => sanitizeField(field));
-                    // Update the indices according to the new CSV format
-                    const [firstName, lastName, , streetAddress, , city, postalCode, , email, count, , , , , entryId] = parts;
-                    if (streetAddress && streetAddress.indexOf('@') == -1) {
-                        geocodeAndAddMarker(streetAddress, postalCode, firstName, lastName, count, email, entryId);
+                    const parts = parseCsvLine(line);
+                    if (parts.length > 0) {
+                        const [firstName, lastName, , streetAddress, , city, postalCode, , email, count, , , , , entryId] = parts;
+                        if (streetAddress) {
+                            if(streetAddress.indexOf('@') == -1 && postalCode.indexOf('@') == -1) {
+                                geocodeAndAddMarker(streetAddress, postalCode, firstName, lastName, count, email, entryId);
+                            } else {
+                                console.error("This does not seem to be an address but private data: " + streetAddress + ", " + postalCode);
+                                alert("Fehler bei der Verarbeitung der CSV-Datei. Bitte überprüfen Sie die Dateistruktur.");
+                            }
+                        }
                     }
                 }
             });
         }
+
+        function parseCsvLine(line) {
+            const parts = [];
+            let currentPart = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ';' && !inQuotes) {
+                    parts.push(sanitizeField(currentPart));
+                    currentPart = '';
+                } else {
+                    currentPart += char;
+                }
+            }
+
+            parts.push(sanitizeField(currentPart)); // Add the last field
+            return parts;
+        }
+
 
         function cleanAddress(address) {
             // Regular expression to match the street name and number, with an optional letter
