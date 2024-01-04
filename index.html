@@ -207,16 +207,17 @@
         const predefinedColors = [
     '#FF0000', // Red, common and vibrant
     '#0000FF', // Blue, vibrant standard color
-    '#FFD800', // Yellow, common and vibrant
+    '#FFBB00', // Golden Yellow, adjusted to be more golden
     '#008000', // Green, common and contrasts with many other colors
     '#B200FF', // Purple, contrasts with yellow and green
-    '#FF6A00', // Orange, contrasts with blue and green
+    '#FF6A00', // Darker Orange, adjusted for better contrast
     '#1E90FF', // Dodger Blue, contrasts well with yellow
     '#32CD32', // Lime Green, contrasts with red and orange
     '#00CED1', // Dark Cyan, contrasts well with red
     '#800000', // Maroon, to be one of the last
     '#FF006E'  // Pink, also to be one of the last
 ];
+
         const teamColors = {};
         const teamClusterGroups = {};
         let current_position, current_accuracy;
@@ -493,18 +494,18 @@
             }
             var radius = e.accuracy / 2;
             current_position = L.circleMarker(e.latlng, {
-                radius: 5,
-                color: 'blue',
-                fillColor: 'blue',
+                radius: 6,
+                color: 'white',
+                fillColor: '#3A5FCD',
                 fillOpacity: 1,
-                weight: 2,
+                weight: 1,
                 pane: 'locationMarkerPane'
             }).addTo(map);
             current_accuracy = L.circle(e.latlng, {
                 radius: radius,
-                color: 'rgba(0, 0, 255, 0.1)',
+                color: 'rgba(0, 0, 255, 0.14)',
                 fillColor: '#cacaca',
-                fillOpacity: 0.2,
+                fillOpacity: 0.23,
                 weight: 1
             }).addTo(map);
         }
