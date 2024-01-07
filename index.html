@@ -335,32 +335,43 @@
                 window.location.reload();
                 return;
             }
+            
+            let totalCount = 0;
+            let totalLocations = 0;
+            
             for (let index = 0; index < lines.length; index++) {
                 const line = lines[index];
                 const columns = line.split(';');
-        
-                if (line && columns.length !== 10) {
+
+                if (line && columns.length !== 11) {
                     alert('Die ausgewählte Datei ist inkompatibel. Bitte wählen Sie die korrekte CSV-Datei aus.');
                     window.location.reload();
                     return;
                 }
-        
+
                 if (index === 0) {
-                        const [teamName, address, surname, name, telNumber, count, lon, lat, id, newApiKey] = columns;
+                    const [teamName, id, streetAddress, surname, name, count, telNumber, postalCode, lon, lat, newApiKey] = columns;
                     apiKey = newApiKey;
                 } else if (line) {
-                    const [teamName, address, surname, name, telNumber, countRaw, lon, lat, id, empty] = columns;
+                    const [teamName, id, streetAddress, surname, name, countRaw, telNumber, postalCode, lon, lat,] = columns;
                     const count = countRaw || 1;
+                    totalCount += parseInt(count);
+                    totalLocations += 1;
                     if (!teamClusterGroups[teamName]) {
                         teamClusterGroups[teamName] = initClusterGroup(getTeamColor(teamName));
                         teamClusterGroups[teamName].addTo(map);
                     }
                     for (let i = 0; i < count; i++) {
-                        addMarkerToMap(lat, lon, address, teamName, telNumber, count > 1 ? `${name} #${i + 1}` : name, surname, `${id}_${i}`);
-                    }                    
+                        const address = `${streetAddress}<br>${postalCode}`;
+                        addMarkerToMap(lat, lon, address, teamName, telNumber, count > 1 ? `${name} #${i + 1}` : name, surname, count > 1 ? `${id}_${i + 1}` : id);
+                    }
                 }
             }
+
+            console.log(`Gesamtzahl an Bäumen: ${totalCount}`);
+            console.log(`Gesamtzahl an Locations: ${totalLocations}`);
         }
+
         
         
 
@@ -421,7 +432,7 @@
                     buttonsHTML += `<button class="popup-button" onclick="clickToDoneLayer('${marker.markerId}')">Erledigt ✅</button>`;
                     buttonsHTML += `<button class="popup-button" onclick="clickToMissingLayer('${marker.markerId}')">Fehlend ❓</button>`;
             }
-            marker.bindPopup(`<span class="popup-header">${marker.surname}, ${marker.name}</span><br>${marker.address}<br>Tel. ${marker.telNumber}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
+            marker.bindPopup(`<span class="popup-header">${marker.surname}, ${marker.name}</span><br>${marker.address}<br>Tel. ${marker.telNumber}<br>Baum-ID: ${marker.markerId}<div style="margin-top: 10px;"></div>${buttonsHTML}`);
         }
         
 
