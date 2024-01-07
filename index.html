@@ -336,7 +336,7 @@
                 return;
             }
             
-            let totalCount = 0;
+            let totalCount = 0;            
             let totalLocations = 0;
             
             for (let index = 0; index < lines.length; index++) {
@@ -354,7 +354,7 @@
                     apiKey = newApiKey;
                 } else if (line) {
                     const [teamName, id, streetAddress, surname, name, countRaw, telNumber, postalCode, lon, lat,] = columns;
-                    const count = countRaw || 1;
+                    const count = Math.abs(countRaw || 1);
                     totalCount += parseInt(count);
                     totalLocations += 1;
                     if (!teamClusterGroups[teamName]) {
@@ -363,12 +363,12 @@
                     }
                     for (let i = 0; i < count; i++) {
                         const address = `${streetAddress}<br>${postalCode}`;
-                        addMarkerToMap(lat, lon, address, teamName, telNumber, count > 1 ? `${name} #${i + 1}` : name, surname, count > 1 ? `${id}_${i + 1}` : id);
+                        addMarkerToMap(lat, lon, address, teamName, telNumber, count > 1 ? `${name} #${i + 1}` : name, surname, count > 1 ? `${id}_${i + 1}` : id);                        
                     }
                 }
             }
 
-            console.log(`Gesamtzahl an Bäumen: ${totalCount}`);
+            console.log(`Gesamtzahl an Bäumen: ${totalCount}`);           
             console.log(`Gesamtzahl an Locations: ${totalLocations}`);
         }
 

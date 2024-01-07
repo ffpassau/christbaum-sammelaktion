@@ -578,13 +578,14 @@ map.addControl(new L.Control.LoadSaveCSVControl({ position: 'bottomright' }));
                     const { lat, lon } = data[0];
                     addMarker(lat, lon, name, surname, streetAddress, postalCode, count, telNumber, entryId, correctedAddress);
                 } else {
-                    if (correctedAddress !== cleanedAddress) {
+                    if (correctedAddress && correctedAddress !== cleanedAddress) {
                         console.info(`Adresse "${cleanedAddress}" korrigiert zu: "${correctedAddress}".`);
                         return geocodeAndAddMarker(correctedAddress, postalCode, name, surname, count, telNumber, entryId);
                         // Retry geocoding with corrected address
                         // You may need to adjust this logic based on how you implement address correction
                     } else {
-                        alert(`Fehler bei Suche nach Adresse: Kein valides Ergebnis für "${streetAddress}, ${postalCode}".\n\nUm eine Abholdatei erstellen zu können, müssen Sie die Adresse händisch in der CSV-Datei bearbeiten.`);
+                        alert(`Fehler bei Suche nach Adresse: Kein valides Ergebnis für "${streetAddress}, ${postalCode}".\n\nUm eine Abholdatei erstellen zu können, müssen Sie die Adresse händisch in der CSV-Datei bearbeiten.`);                    
+                        console.info(`Fehler bei Suche nach Adresse: Kein valides Ergebnis für "${streetAddress}, ${postalCode}".`)
                         disableCreateCsvButton();
                     }
                 }
